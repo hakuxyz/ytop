@@ -54,7 +54,8 @@ jobs:
         with:
           release: '14'
           prepare: |
-            fetch -o /tmp/rustup-init https://sh.rustup.rs
+            pkg install -y curl
+            curl -o /tmp/rustup-init https://sh.rustup.rs
             sh /tmp/rustup-init -y --default-toolchain stable --profile minimal
           run: |
             set -e
