@@ -20,30 +20,20 @@ use crate::widgets::block;
 const UP_ARROW: &str = "▲";
 const DOWN_ARROW: &str = "▼";
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Default)]
 enum SortMethod {
+	#[default]
 	Cpu,
 	Mem,
 	Num,
 	Command,
 }
 
-impl Default for SortMethod {
-	fn default() -> Self {
-		SortMethod::Cpu
-	}
-}
-
-#[derive(PartialEq, Clone, Copy)]
+#[derive(PartialEq, Clone, Copy, Default)]
 enum SortDirection {
 	Up,
+	#[default]
 	Down,
-}
-
-impl Default for SortDirection {
-	fn default() -> Self {
-		SortDirection::Down
-	}
 }
 
 impl Not for SortDirection {
@@ -71,6 +61,12 @@ struct Proc {
 	mem: f32,
 }
 
+/// Case-insensitive substring match against the process name and commandline.
+fn matches_filter(proc: &Proc, filter: &str) -> bool {
+	let filter = filter.to_lowercase();
+	proc.name.to_lowercase().contains(&filter) || proc.commandline.to_lowercase().contains(&filter)
+}
+
 pub struct ProcWidget<'a> {
 	title: String,
 	update_interval: Ratio<u64>,
@@ -85,6 +81,11 @@ pub struct ProcWidget<'a> {
 	scrolled: bool,
 	view_height: usize,
 
+	filter: String,
+	filter_editing: bool,
+	row_count: usize,
+	area: Rect,
+
 	cpu_count: u64,
 
 	procs: Vec<Proc>,
@@ -94,7 +95,7 @@ pub struct ProcWidget<'a> {
 }
 
 impl ProcWidget<'_> {
-	pub fn new(colorscheme: &Colorscheme) -> ProcWidget {
+	pub fn new(colorscheme: &Colorscheme) -> ProcWidget<'_> {
 		ProcWidget {
 			title: "Processes".to_string(),
 			update_interval: Ratio::from_integer(1),
@@ -108,6 +109,11 @@ impl ProcWidget<'_> {
 			view_offset: 0,
 			scrolled: false,
 			view_height: 0,
+
+			filter: String::new(),
+			filter_editing: false,
+			row_count: 0,
+			area: Rect::default(),
 
 			cpu_count: cpu::cpu_count(),
 
@@ -125,14 +131,7 @@ impl ProcWidget<'_> {
 	}
 
 	fn scroll_to(&mut self, count: usize) {
-		self.selected_row = usize::min(
-			count,
-			if self.grouping {
-				self.grouped_procs.len()
-			} else {
-				self.procs.len()
-			} - 1,
-		);
+		self.selected_row = usize::min(count, self.row_count.saturating_sub(1));
 		self.selected_proc = None;
 		self.scrolled = true;
 	}
@@ -150,11 +149,7 @@ impl ProcWidget<'_> {
 	}
 
 	pub fn scroll_bottom(&mut self) {
-		self.scroll_to(if self.grouping {
-			self.grouped_procs.len()
-		} else {
-			self.procs.len()
-		});
+		self.scroll_to(usize::MAX);
 	}
 
 	pub fn scroll_half_page_down(&mut self) {
@@ -178,12 +173,68 @@ impl ProcWidget<'_> {
 		self.selected_proc = None;
 	}
 
+	pub fn is_filter_editing(&self) -> bool {
+		self.filter_editing
+	}
+
+	pub fn has_filter(&self) -> bool {
+		!self.filter.is_empty()
+	}
+
+	pub fn start_filter_editing(&mut self) {
+		self.filter_editing = true;
+	}
+
+	pub fn stop_filter_editing(&mut self) {
+		self.filter_editing = false;
+	}
+
+	pub fn filter_push(&mut self, c: char) {
+		self.filter.push(c);
+	}
+
+	pub fn filter_pop(&mut self) {
+		self.filter.pop();
+	}
+
+	pub fn clear_filter(&mut self) {
+		self.filter.clear();
+		self.filter_editing = false;
+	}
+
+	/// Selects the process under the given terminal cell, if the cell is inside the widget and on
+	/// top of a process row.
+	pub fn click(&mut self, x: u16, y: u16) {
+		if x < self.area.x
+			|| x >= self.area.x + self.area.width
+			|| y < self.area.y
+			|| y >= self.area.y + self.area.height
+		{
+			return;
+		}
+		// The first row below the top border and the header row.
+		let first_row_y = self.area.y + 2;
+		if y < first_row_y {
+			return;
+		}
+		let selected = self.view_offset + (y - first_row_y) as usize;
+		if selected >= self.row_count {
+			return;
+		}
+		self.selected_row = selected;
+		self.selected_proc = None;
+		self.scrolled = true;
+	}
+
 	pub fn kill_process(&self) {
-		let (command, arg) = match self.selected_proc.as_ref().unwrap() {
-			SelectedProc::Pid(pid) => ("kill", pid.to_string()),
-			SelectedProc::Name(name) => ("pkill", name.clone()),
+		let (command, arg) = match self.selected_proc.as_ref() {
+			Some(SelectedProc::Pid(pid)) => ("kill", pid.to_string()),
+			Some(SelectedProc::Name(name)) => ("pkill", name.clone()),
+			None => return,
 		};
-		Command::new(command).arg(arg).spawn().unwrap();
+		// The process may have exited by the time we send the signal, so a failure to spawn the
+		// signal command isn't fatal.
+		let _ = Command::new(command).arg(arg).spawn();
 	}
 
 	fn sort(&mut self, sort_method: SortMethod) {
@@ -234,7 +285,9 @@ impl UpdatableWidget for ProcWidget<'_> {
 				#[cfg(target_os = "linux")]
 				let commandline = process.cmdline()?.unwrap_or_else(|| format!("[{}]", name));
 				#[cfg(target_os = "macos")]
-				let commandline = String::default();
+				let commandline = crate::platform::process_commandline(num)
+					.filter(|commandline| !commandline.is_empty())
+					.unwrap_or_else(|| format!("[{}]", name));
 
 				#[cfg(target_os = "linux")]
 				let cpu = process.cpu_percent_oneshot() / cpu_count;
@@ -281,6 +334,8 @@ impl Widget for &mut ProcWidget<'_> {
 			return;
 		}
 
+		self.area = area;
+
 		let inner = Rect {
 			x: area.x + 1,
 			y: area.y + 1,
@@ -295,18 +350,21 @@ impl Widget for &mut ProcWidget<'_> {
 		} else {
 			self.procs.clone()
 		};
+		if !self.filter.is_empty() {
+			procs.retain(|proc| matches_filter(proc, &self.filter));
+		}
 		if self.sort_direction == SortDirection::Up {
 			match self.sort_method {
 				SortMethod::Cpu => procs.sort_by(|a, b| a.cpu.partial_cmp(&b.cpu).unwrap()),
 				SortMethod::Mem => procs.sort_by(|a, b| a.mem.partial_cmp(&b.mem).unwrap()),
-				SortMethod::Num => procs.sort_by(|a, b| a.num.cmp(&b.num)),
+				SortMethod::Num => procs.sort_by_key(|a| a.num),
 				SortMethod::Command => procs.sort_by(|a, b| a.commandline.cmp(&b.commandline)),
 			}
 		} else {
 			match self.sort_method {
 				SortMethod::Cpu => procs.sort_by(|b, a| a.cpu.partial_cmp(&b.cpu).unwrap()),
 				SortMethod::Mem => procs.sort_by(|b, a| a.mem.partial_cmp(&b.mem).unwrap()),
-				SortMethod::Num => procs.sort_by(|b, a| a.num.cmp(&b.num)),
+				SortMethod::Num => procs.sort_by_key(|proc| std::cmp::Reverse(proc.num)),
 				SortMethod::Command => procs.sort_by(|b, a| a.commandline.cmp(&b.commandline)),
 			}
 		}
@@ -330,35 +388,60 @@ impl Widget for &mut ProcWidget<'_> {
 		let updated_header = format!("{}{}", header[header_index], arrow);
 		header[header_index] = &updated_header;
 
-		self.selected_row = match &self.selected_proc {
-			Some(selected_proc) => {
-				match selected_proc {
-					SelectedProc::Pid(pid) => procs.iter().position(|proc| proc.num == *pid),
-					SelectedProc::Name(name) => procs.iter().position(|proc| proc.name == *name),
+		self.row_count = procs.len();
+		if self.row_count == 0 {
+			self.selected_row = 0;
+			self.view_offset = 0;
+			self.selected_proc = None;
+		} else {
+			self.selected_row = match &self.selected_proc {
+				Some(selected_proc) => {
+					match selected_proc {
+						SelectedProc::Pid(pid) => procs.iter().position(|proc| proc.num == *pid),
+						SelectedProc::Name(name) => {
+							procs.iter().position(|proc| proc.name == *name)
+						}
+					}
+				}
+				.unwrap_or(self.selected_row),
+				None => self.selected_row,
+			};
+			self.scroll_to(self.selected_row);
+			self.selected_proc = if self.grouping {
+				Some(SelectedProc::Name(
+					procs[self.selected_row].name.to_string(),
+				))
+			} else {
+				Some(SelectedProc::Pid(procs[self.selected_row].num))
+			};
+
+			if self.scrolled {
+				self.scrolled = false;
+				if self.selected_row + 2 > self.view_offset + inner.height as usize {
+					self.view_offset = self.selected_row + 2 - inner.height as usize;
 				}
 			}
-			.unwrap_or(self.selected_row),
-			None => self.selected_row,
-		};
-		self.scroll_to(self.selected_row);
-		self.selected_proc = if self.grouping {
-			Some(SelectedProc::Name(
-				procs[self.selected_row].name.to_string(),
-			))
-		} else {
-			Some(SelectedProc::Pid(procs[self.selected_row].num))
-		};
-
-		if self.scrolled {
-			self.scrolled = false;
-			if self.selected_row > inner.height as usize + self.view_offset - 2 {
-				self.view_offset = self.selected_row + 2 - inner.height as usize;
-			} else if self.selected_row < self.view_offset {
+			// The number of rows can shrink underneath the viewport, for instance when a filter
+			// is applied, which would otherwise leave the selection out of view.
+			if self.selected_row < self.view_offset {
 				self.view_offset = self.selected_row;
 			}
 		}
 
+		let filter_suffix = if self.filter_editing {
+			format!(" [filter: {}_]", self.filter)
+		} else if !self.filter.is_empty() {
+			format!(" [filter: {}]", self.filter)
+		} else {
+			String::new()
+		};
 		let procs_count = procs.len();
+		let view_start = if procs_count == 0 {
+			0
+		} else {
+			self.view_offset + 1
+		};
+		let view_end = usize::min(self.view_offset + self.view_height, procs_count);
 		Table::new(
 			header.iter(),
 			procs.into_iter().skip(self.view_offset).map(|proc| {
@@ -381,11 +464,8 @@ impl Widget for &mut ProcWidget<'_> {
 		.block(block::new(
 			self.colorscheme,
 			&format!(
-				" {} ({}-{} of {}) ",
-				self.title,
-				self.view_offset + 1,
-				self.view_offset + self.view_height,
-				procs_count
+				" {}{} ({}-{} of {}) ",
+				self.title, filter_suffix, view_start, view_end, procs_count
 			),
 		))
 		.header_style(self.colorscheme.text.modifier(Modifier::BOLD))
@@ -407,7 +487,7 @@ impl Widget for &mut ProcWidget<'_> {
 
 		// Draw cursor.
 		let cursor_y = inner.y + 1 + self.selected_row as u16 - self.view_offset as u16;
-		if cursor_y < inner.bottom() {
+		if self.row_count > 0 && cursor_y < inner.bottom() {
 			for i in inner.x..inner.right() {
 				let cell = buf.get_mut(i, cursor_y);
 				if cell.symbol != " " {
@@ -418,5 +498,42 @@ impl Widget for &mut ProcWidget<'_> {
 				}
 			}
 		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	fn proc(name: &str, commandline: &str) -> Proc {
+		Proc {
+			num: 42,
+			name: name.to_string(),
+			commandline: commandline.to_string(),
+			cpu: 1.5,
+			mem: 2.5,
+		}
+	}
+
+	#[test]
+	fn empty_filter_matches_every_process() {
+		let proc = proc("ytop", "ytop");
+		assert!(matches_filter(&proc, ""));
+	}
+
+	#[test]
+	fn filter_matches_process_name() {
+		let proc = proc("ytop", "/usr/local/bin/ytop");
+		assert!(matches_filter(&proc, "ytop"));
+		assert!(matches_filter(&proc, "TOP"));
+		assert!(!matches_filter(&proc, "htop"));
+	}
+
+	#[test]
+	fn filter_matches_commandline() {
+		let proc = proc("sh", "sh -c cargo build --release");
+		assert!(matches_filter(&proc, "cargo"));
+		assert!(matches_filter(&proc, "--RELEASE"));
+		assert!(!matches_filter(&proc, "firefox"));
 	}
 }

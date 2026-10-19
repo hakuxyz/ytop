@@ -33,7 +33,7 @@ pub struct MemWidget<'a> {
 }
 
 impl MemWidget<'_> {
-	pub fn new(colorscheme: &Colorscheme, update_interval: Ratio<u64>) -> MemWidget {
+	pub fn new(colorscheme: &Colorscheme, update_interval: Ratio<u64>) -> MemWidget<'_> {
 		let update_count = 0;
 
 		let mut main = MemData::default();

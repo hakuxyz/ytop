@@ -37,7 +37,7 @@ impl CpuWidget<'_> {
 		update_interval: Ratio<u64>,
 		show_average: bool,
 		show_percpu: bool,
-	) -> CpuWidget {
+	) -> CpuWidget<'_> {
 		let update_count = 0;
 
 		let mut cpu_widget = CpuWidget {

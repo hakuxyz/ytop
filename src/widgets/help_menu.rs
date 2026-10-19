@@ -31,13 +31,18 @@ Process filtering:
   - /: start editing filter
   - (while editing):
     - <Enter>: accept filter
-    - <C-c> and <Escape>: clear filter
+  - <C-c> and <Escape>: clear filter
+Mouse:
+  - click: select process
+  - scroll wheel: scroll through processes
 CPU and Mem graph scaling:
   - h: scale in
-  - l: scale out";
+  - l: scale out
+Other:
+  - ?: toggle this menu";
 
 const TEXT_WIDTH: u16 = 48;
-const TEXT_HEIGHT: u16 = 29;
+const TEXT_HEIGHT: u16 = 34;
 
 static TEXT_VEC: Lazy<Vec<Text<'static>>> = Lazy::new(|| {
 	TEXT.lines()
@@ -51,7 +56,7 @@ pub struct HelpMenu<'a> {
 }
 
 impl HelpMenu<'_> {
-	pub fn new(colorscheme: &Colorscheme) -> HelpMenu {
+	pub fn new(colorscheme: &Colorscheme) -> HelpMenu<'_> {
 		HelpMenu {
 			title: " Help Menu ".to_string(),
 			colorscheme,
@@ -60,8 +65,8 @@ impl HelpMenu<'_> {
 
 	pub fn get_rect(&self, area: Rect) -> Rect {
 		Rect {
-			x: area.width.checked_sub(TEXT_WIDTH).unwrap_or_default() / 2,
-			y: area.height.checked_sub(TEXT_HEIGHT).unwrap_or_default() / 2,
+			x: area.width.saturating_sub(TEXT_WIDTH) / 2,
+			y: area.height.saturating_sub(TEXT_HEIGHT) / 2,
 			width: cmp::min(TEXT_WIDTH, area.width),
 			height: cmp::min(TEXT_HEIGHT, area.height),
 		}

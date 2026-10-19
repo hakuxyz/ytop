@@ -150,15 +150,14 @@ impl Widget for &NetWidget<'_, '_> {
 
 		Sparkline::default()
 			.data(
-				&self
-					.bytes_recv
+				self.bytes_recv
 					.iter()
 					.cloned()
 					.rev()
 					.collect::<Vec<u64>>()
 					.as_slice(),
 			)
-			.direction(RenderDirection::RTL)
+			.direction(RenderDirection::Rtl)
 			.show_baseline(true)
 			.max(*self.bytes_recv.iter().max().unwrap())
 			.style(self.colorscheme.net_bars)
@@ -187,15 +186,14 @@ impl Widget for &NetWidget<'_, '_> {
 
 		Sparkline::default()
 			.data(
-				&self
-					.bytes_sent
+				self.bytes_sent
 					.iter()
 					.cloned()
 					.rev()
 					.collect::<Vec<u64>>()
 					.as_slice(),
 			)
-			.direction(RenderDirection::RTL)
+			.direction(RenderDirection::Rtl)
 			.show_baseline(true)
 			.max(*self.bytes_sent.iter().max().unwrap())
 			.style(self.colorscheme.net_bars)

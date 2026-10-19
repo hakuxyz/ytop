@@ -2,6 +2,7 @@ mod app;
 mod args;
 mod colorscheme;
 mod draw;
+mod platform;
 mod sparkline;
 mod update;
 mod widgets;
@@ -15,7 +16,10 @@ use std::time::Duration;
 
 use crossbeam_channel::{select, tick, unbounded, Receiver};
 use crossterm::cursor;
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers, MouseEvent};
+use crossterm::event::{
+	DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyModifiers, MouseButton,
+	MouseEvent,
+};
 use crossterm::execute;
 use crossterm::terminal;
 use num_rational::Ratio;
@@ -32,10 +36,13 @@ use update::*;
 
 const PROGRAM_NAME: &str = env!("CARGO_PKG_NAME");
 
-fn setup_terminal() {
+fn setup_terminal(no_mouse: bool) {
 	let mut stdout = io::stdout();
 
 	execute!(stdout, terminal::EnterAlternateScreen).unwrap();
+	if !no_mouse {
+		execute!(stdout, EnableMouseCapture).unwrap();
+	}
 	execute!(stdout, cursor::Hide).unwrap();
 
 	// Needed for when ytop is run in a TTY since TTYs don't actually have an alternate screen.
@@ -48,8 +55,12 @@ fn setup_terminal() {
 	terminal::enable_raw_mode().unwrap();
 }
 
-fn cleanup_terminal() {
+fn cleanup_terminal(no_mouse: bool) {
 	let mut stdout = io::stdout();
+
+	if !no_mouse {
+		execute!(stdout, DisableMouseCapture).unwrap();
+	}
 
 	// Needed for when ytop is run in a TTY since TTYs don't actually have an alternate screen.
 	// Must be executed before attempting to leave the alternate screen so that it only modifies the
@@ -112,9 +123,9 @@ fn setup_logfile(logfile_path: &Path) {
 
 // We need to catch panics since we need to close the UI and cleanup the terminal before logging any
 // error messages to the screen.
-fn setup_panic_hook() {
-	panic::set_hook(Box::new(|panic_info| {
-		cleanup_terminal();
+fn setup_panic_hook(no_mouse: bool) {
+	panic::set_hook(Box::new(move |panic_info| {
+		cleanup_terminal(no_mouse);
 		better_panic::Settings::auto().create_panic_handler()(panic_info);
 	}));
 }
@@ -135,8 +146,8 @@ fn main() {
 	let backend = CrosstermBackend::new(io::stdout());
 	let mut terminal = Terminal::new(backend).unwrap();
 
-	setup_panic_hook();
-	setup_terminal();
+	setup_panic_hook(args.no_mouse);
+	setup_terminal(args.no_mouse);
 
 	let ticker = tick(Duration::from_secs_f64(
 		*draw_interval.numer() as f64 / *draw_interval.denom() as f64,
@@ -185,7 +196,31 @@ fn main() {
 
 				match message.unwrap() {
 					Event::Key(key_event) => {
-						if key_event.modifiers.is_empty() {
+						if app.widgets.proc.is_filter_editing() {
+							let modifiers = key_event.modifiers;
+							match key_event.code {
+								KeyCode::Esc => {
+									app.widgets.proc.clear_filter();
+								}
+								KeyCode::Enter => {
+									app.widgets.proc.stop_filter_editing();
+								}
+								KeyCode::Char('c') if modifiers == KeyModifiers::CONTROL => {
+									app.widgets.proc.clear_filter();
+								}
+								KeyCode::Backspace if modifiers.is_empty() => {
+									app.widgets.proc.filter_pop();
+								}
+								KeyCode::Char(c) if modifiers.is_empty() => {
+									app.widgets.proc.filter_push(c);
+								}
+								_ => {}
+							}
+							proc_modified = true;
+							// Discard the keypress so that it can't complete multi-key actions
+							// such as `dd` after editing the filter is done.
+							skip_key = true;
+						} else if key_event.modifiers.is_empty() {
 							match key_event.code {
 								KeyCode::Char('q') => {
 									break
@@ -244,6 +279,9 @@ fn main() {
 									if show_help_menu {
 										show_help_menu = false;
 										draw(&mut terminal, &mut app);
+									} else if app.widgets.proc.has_filter() {
+										app.widgets.proc.clear_filter();
+										proc_modified = true;
 									}
 								}
 								KeyCode::Tab => {
@@ -264,6 +302,10 @@ fn main() {
 								},
 								KeyCode::Char('m') => {
 									app.widgets.proc.sort_by_mem();
+									proc_modified = true;
+								},
+								KeyCode::Char('/') => {
+									app.widgets.proc.start_filter_editing();
 									proc_modified = true;
 								},
 								_ => {}
@@ -299,7 +341,6 @@ fn main() {
 							Some(key_event)
 						};
 					}
-					// TODO: figure out why these aren't working
 					Event::Mouse(mouse_event) => match mouse_event {
 						MouseEvent::ScrollUp(_, _, _) => {
 							app.widgets.proc.scroll_up();
@@ -307,6 +348,10 @@ fn main() {
 						},
 						MouseEvent::ScrollDown(_, _, _) => {
 							app.widgets.proc.scroll_down();
+							proc_modified = true;
+						},
+						MouseEvent::Down(MouseButton::Left, column, row, _) => {
+							app.widgets.proc.click(column, row);
 							proc_modified = true;
 						},
 						_ => {}
@@ -331,5 +376,5 @@ fn main() {
 		}
 	}
 
-	cleanup_terminal();
+	cleanup_terminal(args.no_mouse);
 }

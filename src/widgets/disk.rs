@@ -36,7 +36,7 @@ pub struct DiskWidget<'a> {
 }
 
 impl DiskWidget<'_> {
-	pub fn new(colorscheme: &Colorscheme) -> DiskWidget {
+	pub fn new(colorscheme: &Colorscheme) -> DiskWidget<'_> {
 		DiskWidget {
 			title: " Disk Usage ".to_string(),
 			update_interval: Ratio::from_integer(1),

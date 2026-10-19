@@ -44,6 +44,10 @@ pub struct Args {
 	#[structopt(short = "m", long = "minimal")]
 	pub minimal: bool,
 
+	/// Disable mouse capture.
+	#[structopt(short = "M", long = "no-mouse")]
+	pub no_mouse: bool,
+
 	/// Show each CPU in the CPU widget.
 	#[structopt(short = "p", long = "per-cpu")]
 	pub per_cpu: bool,

@@ -25,7 +25,7 @@ pub struct TempWidget<'a> {
 }
 
 impl TempWidget<'_> {
-	pub fn new(colorscheme: &Colorscheme, fahrenheit: bool) -> TempWidget {
+	pub fn new(colorscheme: &Colorscheme, fahrenheit: bool) -> TempWidget<'_> {
 		TempWidget {
 			title: " Temperatures ".to_string(),
 			update_interval: Ratio::from_integer(5),

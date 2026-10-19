@@ -24,7 +24,7 @@ pub struct BatteryWidget<'a> {
 }
 
 impl BatteryWidget<'_> {
-	pub fn new(colorscheme: &Colorscheme) -> BatteryWidget {
+	pub fn new(colorscheme: &Colorscheme) -> BatteryWidget<'_> {
 		BatteryWidget {
 			title: " Batteries ".to_string(),
 			update_interval: Ratio::from_integer(60),
@@ -81,7 +81,7 @@ impl Widget for &BatteryWidget<'_> {
 					.marker(Marker::Braille)
 					.style(self.colorscheme.battery_lines[i % self.colorscheme.battery_lines.len()])
 					.graph_type(GraphType::Line)
-					.data(&data)
+					.data(data)
 			})
 			.collect();
 
