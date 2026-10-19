@@ -1,0 +1,30 @@
+# Maintainer: haku <beamzbyhakz@proton.me>
+pkgname=ytop
+pkgver=0.8.0
+pkgrel=1
+pkgdesc='A TUI system monitor written in Rust'
+arch=('x86_64')
+url='https://github.com/hakuxyz/ytop'
+license=('MIT')
+depends=('glibc')
+makedepends=('cargo')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/$pkgver.tar.gz")
+sha256sums=('0a6d25a8fef272bbb355395f0c8949d8249c249e60b1bc31d5603e52d4a973e3')
+
+prepare() {
+	cd "$pkgname-$pkgver"
+	export RUSTUP_TOOLCHAIN=stable
+	cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+	cd "$pkgname-$pkgver"
+	export RUSTUP_TOOLCHAIN=stable
+	cargo build --frozen --release
+}
+
+package() {
+	cd "$pkgname-$pkgver"
+	install -Dm755 target/release/ytop -t "$pkgdir/usr/bin"
+	install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

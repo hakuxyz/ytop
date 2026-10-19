@@ -1,0 +1,13 @@
+pkgbase = ytop
+	pkgdesc = A TUI system monitor written in Rust
+	pkgver = 0.8.0
+	pkgrel = 1
+	url = https://github.com/hakuxyz/ytop
+	arch = x86_64
+	license = MIT
+	makedepends = cargo
+	depends = glibc
+	source = ytop-0.8.0.tar.gz::https://github.com/hakuxyz/ytop/archive/refs/tags/0.8.0.tar.gz
+	sha256sums = 0a6d25a8fef272bbb355395f0c8949d8249c249e60b1bc31d5603e52d4a973e3
+
+pkgname = ytop

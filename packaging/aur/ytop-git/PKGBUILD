@@ -1,0 +1,37 @@
+# Maintainer: haku <beamzbyhakz@proton.me>
+pkgname=ytop-git
+pkgver=0.8.0.r1.g34d0df0
+pkgrel=1
+pkgdesc='A TUI system monitor written in Rust (git version)'
+arch=('x86_64')
+url='https://github.com/hakuxyz/ytop'
+license=('MIT')
+depends=('glibc')
+makedepends=('cargo' 'git')
+provides=('ytop')
+conflicts=('ytop')
+source=('ytop-git::git+https://github.com/hakuxyz/ytop.git')
+sha256sums=('SKIP')
+
+pkgver() {
+	cd ytop-git
+	git describe --tags --long 2>/dev/null | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g' || printf 'r%s.%s' "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+}
+
+prepare() {
+	cd ytop-git
+	export RUSTUP_TOOLCHAIN=stable
+	cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+	cd ytop-git
+	export RUSTUP_TOOLCHAIN=stable
+	cargo build --frozen --release
+}
+
+package() {
+	cd ytop-git
+	install -Dm755 target/release/ytop -t "$pkgdir/usr/bin"
+	install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
