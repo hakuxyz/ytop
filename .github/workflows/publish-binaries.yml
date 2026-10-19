@@ -4,6 +4,15 @@ on:
   release:
     types:
       - created
+  # Releases are created with the workflow's GITHUB_TOKEN, which does not fire
+  # the release event above, so create-release.yml dispatches this workflow
+  # explicitly instead.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to publish the binaries for
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -34,12 +43,13 @@ jobs:
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Package release
-        run: tar -czf ytop-${{ github.event.release.tag_name }}-${{ matrix.target }}.tar.gz -C ./target/${{ matrix.target }}/release/ ytop
+        run: tar -czf ytop-${{ inputs.tag || github.event.release.tag_name }}-${{ matrix.target }}.tar.gz -C ./target/${{ matrix.target }}/release/ ytop
 
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
-          files: ytop-${{ github.event.release.tag_name }}-${{ matrix.target }}.tar.gz
+          tag_name: ${{ inputs.tag || github.event.release.tag_name }}
+          files: ytop-${{ inputs.tag || github.event.release.tag_name }}-${{ matrix.target }}.tar.gz
 
   # The FreeBSD binary cannot be cross-linked from Linux or macOS, so it is
   # built inside a real FreeBSD VM.
@@ -63,9 +73,10 @@ jobs:
             cargo build --release
 
       - name: Package release
-        run: tar -czf ytop-${{ github.event.release.tag_name }}-x86_64-unknown-freebsd.tar.gz -C ./target/release/ ytop
+        run: tar -czf ytop-${{ inputs.tag || github.event.release.tag_name }}-x86_64-unknown-freebsd.tar.gz -C ./target/release/ ytop
 
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
-          files: ytop-${{ github.event.release.tag_name }}-x86_64-unknown-freebsd.tar.gz
+          tag_name: ${{ inputs.tag || github.event.release.tag_name }}
+          files: ytop-${{ inputs.tag || github.event.release.tag_name }}-x86_64-unknown-freebsd.tar.gz

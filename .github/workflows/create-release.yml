@@ -23,3 +23,12 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: false
+
+      # The release event does not fire for releases created with the
+      # workflow's GITHUB_TOKEN, so the binary publishing is dispatched
+      # explicitly (workflow_dispatch is exempt from that suppression).
+      - name: Publish the binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run publish-binaries.yml --ref "${{ github.ref }}" -f tag="${{ github.ref_name }}"
+
