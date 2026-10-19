@@ -1,21 +1,25 @@
 name: Create Release
 
+# Releases are only created for tags of this fork. The upstream tags (0.1.0 up
+# to 0.6.2) are pushed along with the history but must not create releases.
 on:
   push:
     tags:
-    - '*'
+      - '0.7.*'
+      - '0.8.*'
+      - '0.9.*'
+      - '[1-9].*'
+
+permissions:
+  contents: write
 
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
       - name: Create Release
-        uses: actions/create-release@v1.0.0
-        env:
-          # https://github.community/t5/GitHub-Actions/Github-Action-trigger-on-release-not-working-if-releases-was/td-p/34559
-          GITHUB_TOKEN: ${{ secrets.PAT }}
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
+          generate_release_notes: true
           draft: false
           prerelease: false

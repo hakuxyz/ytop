@@ -15,6 +15,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-19
+
+Maintenance release continuing the original
+[cjbassi/ytop](https://github.com/cjbassi/ytop), which is no longer maintained.
+
+### Added
+
+- [process] process filtering: `/` starts editing, `<Enter>` accepts,
+  `<C-c>`/`<Escape>` clears the filter
+- [mouse] mouse support: click selects a process, the mouse wheel scrolls
+  through the process list; `-M`/`--no-mouse` disables mouse capture
+- [process][macos] process command lines are shown now (read via
+  `KERN_PROCARGS2`, since psutil does not implement them on macOS)
+
+### Changed
+
+- update dependencies so the project builds on current stable Rust
+  (battery 0.7.8, psutil 5.4.0, serde 1.0.229, ctrlc 3.5, backtrace)
+- update the GitHub Actions workflows
+
+### Fixed
+
+- [process] `dd` no longer panics when no process is selected or when killing
+  the process fails
+- [process] scrolling and clicking stay within the visible process list
+
 ## [0.6.2] - 2020-05-16
 
 ### Added
@@ -138,15 +164,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial release!
 
-[Unreleased]: https://github.com/cjbassi/ytop/compare/0.6.2...HEAD
-[0.6.2]: https://github.com/cjbassi/ytop/compare/0.6.1...0.6.2
-[0.6.1]: https://github.com/cjbassi/ytop/compare/0.6.0...0.6.1
-[0.6.0]: https://github.com/cjbassi/ytop/compare/0.5.1...0.6.0
-[0.5.1]: https://github.com/cjbassi/ytop/compare/0.5.0...0.5.1
-[0.5.0]: https://github.com/cjbassi/ytop/compare/0.4.3...0.5.0
-[0.4.3]: https://github.com/cjbassi/ytop/compare/0.4.2...0.4.3
-[0.4.2]: https://github.com/cjbassi/ytop/compare/0.4.1...0.4.2
-[0.4.1]: https://github.com/cjbassi/ytop/compare/0.4.0...0.4.1
-[0.4.0]: https://github.com/cjbassi/ytop/compare/0.3.0...0.4.0
-[0.3.0]: https://github.com/cjbassi/ytop/compare/0.2.0...0.3.0
-[0.2.0]: https://github.com/cjbassi/ytop/compare/0.1.0...0.2.0
+[Unreleased]: https://github.com/hakuxyz/ytop/compare/0.7.0...HEAD
+[0.7.0]: https://github.com/hakuxyz/ytop/compare/0.6.2...0.7.0
+[0.6.2]: https://github.com/hakuxyz/ytop/compare/0.6.1...0.6.2
+[0.6.1]: https://github.com/hakuxyz/ytop/compare/0.6.0...0.6.1
+[0.6.0]: https://github.com/hakuxyz/ytop/compare/0.5.1...0.6.0
+[0.5.1]: https://github.com/hakuxyz/ytop/compare/0.5.0...0.5.1
+[0.5.0]: https://github.com/hakuxyz/ytop/compare/0.4.3...0.5.0
+[0.4.3]: https://github.com/hakuxyz/ytop/compare/0.4.2...0.4.3
+[0.4.2]: https://github.com/hakuxyz/ytop/compare/0.4.1...0.4.2
+[0.4.1]: https://github.com/hakuxyz/ytop/compare/0.4.0...0.4.1
+[0.4.0]: https://github.com/hakuxyz/ytop/compare/0.3.0...0.4.0
+[0.3.0]: https://github.com/hakuxyz/ytop/compare/0.2.0...0.3.0
+[0.2.0]: https://github.com/hakuxyz/ytop/compare/0.1.0...0.2.0
