@@ -151,11 +151,35 @@ if pid == 0:
 set_winsize(fd)
 
 screen = Screen()
-raw = drain(fd, 2.0)
-screen.feed(raw)
+raw = b""
+
+
+def pump(seconds=0.5):
+	"""Feed freshly read output into the emulated screen."""
+	global raw
+	data = drain(fd, seconds)
+	raw += data
+	screen.feed(data)
+	return data
+
+
+def wait_for(condition, timeout=15.0):
+	"""Wait until the condition holds, allowing for slow machines."""
+	deadline = time.time() + timeout
+	while True:
+		if condition():
+			return True
+		if time.time() >= deadline:
+			return condition()
+		pump(0.5)
+
+
+# CI machines can need a while for the first render with a full process list,
+# so poll instead of reading for a fixed amount of time.
+pump(2.0)
 check(b"\x1b[?1000h" in raw or b"\x1b[?1006h" in raw, "mouse capture not enabled")
-check("Processes" in screen.text(), "initial render missing process widget")
-check(len(screen.cursor_rows()) == 1, "process cursor not drawn")
+check(wait_for(lambda: "Processes" in screen.text()), "initial render missing process widget")
+check(wait_for(lambda: len(screen.cursor_rows()) == 1), "process cursor not drawn")
 
 # ---------------------------------------------------------------- filter
 act(screen, fd, b"/")
