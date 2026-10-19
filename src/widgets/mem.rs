@@ -1,10 +1,10 @@
+use crate::sys::memory;
 use num_rational::Ratio;
-use psutil::memory;
+use ratatui::buffer::Buffer;
+use ratatui::layout::Rect;
+use ratatui::symbols::Marker;
+use ratatui::widgets::{Axis, Chart, Dataset, GraphType, Widget};
 use size::Size;
-use tui::buffer::Buffer;
-use tui::layout::Rect;
-use tui::symbols::Marker;
-use tui::widgets::{Axis, Chart, Dataset, GraphType, Widget};
 
 use crate::colorscheme::Colorscheme;
 use crate::update::UpdatableWidget;
@@ -120,14 +120,13 @@ impl Widget for &MemWidget<'_> {
 			)
 		}
 
-		Chart::<String, String>::default()
+		Chart::new(datasets)
 			.block(block::new(self.colorscheme, &self.title))
 			.x_axis(Axis::default().bounds([
 				self.update_count as f64 - self.horizontal_scale as f64,
 				self.update_count as f64 + 1.0,
 			]))
 			.y_axis(Axis::default().bounds([0.0, 100.0]))
-			.datasets(&datasets)
 			.render(area, buf);
 
 		buf.set_string(

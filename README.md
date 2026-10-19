@@ -16,23 +16,24 @@
 
 ## What's new in this fork
 
+- **FreeBSD support**: every widget works without psutil, reading `sysctl`,
+  `getfsstat` and `getifaddrs` directly
 - **Process filtering**: press `/` to filter processes by name or command line
 - **Mouse support**: click to select a process and use the mouse wheel to
   scroll through the process list; run with `-M`/`--no-mouse` to disable mouse
   capture
 - **macOS process command lines**: read via `KERN_PROCARGS2`, since psutil does
   not implement them on macOS
+- migrated from tui-rs to [ratatui](https://github.com/ratatui/ratatui)
 - Builds on current stable Rust again (dependency and toolchain refresh)
 
 ## Missing features
 
-- macOS is missing disk io counters
-- FreeBSD is currently unsupported, because
-  [psutil](https://github.com/giletka/psutil-rs) only supports Linux and macOS
+- macOS and FreeBSD are missing disk io counters
 
 ## Installation
 
-ytop runs on Linux and macOS.
+ytop runs on Linux, macOS and FreeBSD.
 
 ### From source
 

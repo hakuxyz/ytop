@@ -4,29 +4,30 @@ mod colorscheme;
 mod draw;
 mod platform;
 mod sparkline;
+mod sys;
 mod update;
 mod widgets;
 
 use std::fs;
-use std::io::{self, Write};
+use std::io;
 use std::panic;
 use std::path::Path;
 use std::thread;
 use std::time::Duration;
 
 use crossbeam_channel::{select, tick, unbounded, Receiver};
-use crossterm::cursor;
-use crossterm::event::{
-	DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyModifiers, MouseButton,
-	MouseEvent,
-};
-use crossterm::execute;
-use crossterm::terminal;
 use num_rational::Ratio;
 use platform_dirs::{AppDirs, AppUI};
+use ratatui::backend::CrosstermBackend;
+use ratatui::crossterm::cursor;
+use ratatui::crossterm::event::{
+	DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyEvent, KeyModifiers, MouseButton,
+	MouseEventKind,
+};
+use ratatui::crossterm::execute;
+use ratatui::crossterm::terminal;
+use ratatui::Terminal;
 use structopt::StructOpt;
-use tui::backend::CrosstermBackend;
-use tui::Terminal;
 
 use app::*;
 use args::*;
@@ -79,7 +80,9 @@ fn cleanup_terminal(no_mouse: bool) {
 fn setup_ui_events() -> Receiver<Event> {
 	let (sender, receiver) = unbounded();
 	thread::spawn(move || loop {
-		sender.send(crossterm::event::read().unwrap()).unwrap();
+		sender
+			.send(ratatui::crossterm::event::read().unwrap())
+			.unwrap();
 	});
 
 	receiver
@@ -341,17 +344,17 @@ fn main() {
 							Some(key_event)
 						};
 					}
-					Event::Mouse(mouse_event) => match mouse_event {
-						MouseEvent::ScrollUp(_, _, _) => {
+					Event::Mouse(mouse_event) => match mouse_event.kind {
+						MouseEventKind::ScrollUp => {
 							app.widgets.proc.scroll_up();
 							proc_modified = true;
 						},
-						MouseEvent::ScrollDown(_, _, _) => {
+						MouseEventKind::ScrollDown => {
 							app.widgets.proc.scroll_down();
 							proc_modified = true;
 						},
-						MouseEvent::Down(MouseButton::Left, column, row, _) => {
-							app.widgets.proc.click(column, row);
+						MouseEventKind::Down(MouseButton::Left) => {
+							app.widgets.proc.click(mouse_event.column, mouse_event.row);
 							proc_modified = true;
 						},
 						_ => {}
@@ -363,6 +366,7 @@ fn main() {
 							draw(&mut terminal, &mut app);
 						}
 					}
+					_ => {}
 				}
 
 				if !show_help_menu {

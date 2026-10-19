@@ -1,9 +1,10 @@
 use std::cmp;
 
 use once_cell::sync::Lazy;
-use tui::buffer::Buffer;
-use tui::layout::Rect;
-use tui::widgets::{Paragraph, Text, Widget};
+use ratatui::buffer::Buffer;
+use ratatui::layout::Rect;
+use ratatui::text::Line;
+use ratatui::widgets::{Paragraph, Widget};
 
 use crate::colorscheme::Colorscheme;
 use crate::widgets::block;
@@ -44,11 +45,7 @@ Other:
 const TEXT_WIDTH: u16 = 48;
 const TEXT_HEIGHT: u16 = 34;
 
-static TEXT_VEC: Lazy<Vec<Text<'static>>> = Lazy::new(|| {
-	TEXT.lines()
-		.map(|line| Text::raw(format!("{}\n", line)))
-		.collect()
-});
+static TEXT_VEC: Lazy<Vec<Line<'static>>> = Lazy::new(|| TEXT.lines().map(Line::raw).collect());
 
 pub struct HelpMenu<'a> {
 	title: String,
@@ -75,7 +72,7 @@ impl HelpMenu<'_> {
 
 impl Widget for &HelpMenu<'_> {
 	fn render(self, area: Rect, buf: &mut Buffer) {
-		Paragraph::new(TEXT_VEC.iter())
+		Paragraph::new(TEXT_VEC.clone())
 			.block(block::new(self.colorscheme, &self.title))
 			.render(area, buf);
 	}

@@ -1,12 +1,12 @@
+use crate::sys::network;
 use num_rational::Ratio;
-use psutil::network;
+use ratatui::buffer::Buffer;
+use ratatui::layout::Rect;
+use ratatui::style::Modifier;
 use size::Size;
-use tui::buffer::Buffer;
-use tui::layout::Rect;
-use tui::style::Modifier;
-// use tui::widgets::{RenderDirection, Sparkline, Widget};
+// use ratatui::widgets::{RenderDirection, Sparkline, Widget};
 use crate::sparkline::{RenderDirection, Sparkline};
-use tui::widgets::Widget;
+use ratatui::widgets::Widget;
 
 use crate::colorscheme::Colorscheme;
 use crate::update::UpdatableWidget;
@@ -135,7 +135,7 @@ impl Widget for &NetWidget<'_, '_> {
 			top_half.x + 1,
 			top_half.y + 1,
 			format!("Total Rx: {}", Size::Bytes(self.total_bytes_recv)),
-			self.colorscheme.text.modifier(Modifier::BOLD),
+			self.colorscheme.text.add_modifier(Modifier::BOLD),
 		);
 
 		buf.set_string(
@@ -145,7 +145,7 @@ impl Widget for &NetWidget<'_, '_> {
 				"Rx/s:     {}/s",
 				Size::Bytes(self.bytes_recv.last().unwrap().to_owned())
 			),
-			self.colorscheme.text.modifier(Modifier::BOLD),
+			self.colorscheme.text.add_modifier(Modifier::BOLD),
 		);
 
 		Sparkline::default()
@@ -171,7 +171,7 @@ impl Widget for &NetWidget<'_, '_> {
 			bottom_half.x + 1,
 			bottom_half.y + 1,
 			format!("Total Tx: {}", Size::Bytes(self.total_bytes_sent)),
-			self.colorscheme.text.modifier(Modifier::BOLD),
+			self.colorscheme.text.add_modifier(Modifier::BOLD),
 		);
 
 		buf.set_string(
@@ -181,7 +181,7 @@ impl Widget for &NetWidget<'_, '_> {
 				"Tx/s:     {}/s",
 				Size::Bytes(self.bytes_sent.last().unwrap().to_owned())
 			),
-			self.colorscheme.text.modifier(Modifier::BOLD),
+			self.colorscheme.text.add_modifier(Modifier::BOLD),
 		);
 
 		Sparkline::default()

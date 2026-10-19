@@ -1,7 +1,7 @@
 use num_rational::Ratio;
-use tui::buffer::Buffer;
-use tui::layout::Rect;
-use tui::widgets::Widget;
+use ratatui::buffer::Buffer;
+use ratatui::layout::Rect;
+use ratatui::widgets::Widget;
 
 use crate::colorscheme::Colorscheme;
 use crate::update::UpdatableWidget;
@@ -10,8 +10,8 @@ use crate::widgets::block;
 #[cfg(target_os = "macos")]
 use sysinfo::{ComponentExt, System, SystemExt};
 
-#[cfg(target_os = "linux")]
-use psutil::sensors;
+#[cfg(not(target_os = "macos"))]
+use crate::sys::sensors;
 
 pub struct TempWidget<'a> {
 	title: String,
@@ -39,7 +39,7 @@ impl TempWidget<'_> {
 }
 
 impl UpdatableWidget for TempWidget<'_> {
-	#[cfg(target_os = "linux")]
+	#[cfg(not(target_os = "macos"))]
 	fn update(&mut self) {
 		self.temp_data = sensors::temperatures()
 			.into_iter()

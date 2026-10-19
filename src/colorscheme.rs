@@ -3,8 +3,8 @@ use std::path::Path;
 use std::process;
 use std::str::FromStr;
 
+use ratatui::style::{Color, Style};
 use serde::Deserialize;
-use tui::style::{Color, Style};
 
 pub enum Colorschemes {
 	Default,

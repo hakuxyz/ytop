@@ -1,4 +1,4 @@
-use tui::widgets::{Block, Borders};
+use ratatui::widgets::{Block, Borders};
 
 use crate::colorscheme::Colorscheme;
 

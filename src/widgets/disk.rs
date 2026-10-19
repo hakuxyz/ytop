@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use crate::sys::disk;
 use num_rational::Ratio;
-use psutil::disk;
+use ratatui::buffer::Buffer;
+use ratatui::layout::{Constraint, Rect};
+use ratatui::style::Modifier;
+use ratatui::widgets::{Row, Table, Widget};
 use size::Size;
-use tui::buffer::Buffer;
-use tui::layout::{Constraint, Rect};
-use tui::style::Modifier;
-use tui::widgets::{Row, Table, Widget};
 
 use crate::colorscheme::Colorscheme;
 use crate::update::UpdatableWidget;
@@ -83,7 +83,7 @@ impl UpdatableWidget for DiskWidget<'_> {
 					.unwrap_or_default();
 
 				let bytes_read = io_counters.read_count();
-				let bytes_written = io_counters.read_count();
+				let bytes_written = io_counters.write_count();
 				// Here we use an `unwrap_or_default` for when we are adding a new disk partition
 				// that is loaded when on ytop is already running.
 				let (bytes_read_recently, bytes_written_recently) = self
@@ -171,27 +171,25 @@ impl Widget for &DiskWidget<'_> {
 		partitions.sort_by(|a, b| a.name.cmp(&b.name));
 
 		Table::new(
-			["Partition", "Mount", "Used", "Free", "R/s", "W/s"].iter(),
 			partitions.into_iter().map(|partition| {
-				Row::StyledData(
-					vec![
-						partition.name,
-						format!("{}", partition.mountpoint.display()),
-						format!("{:3.0}%", partition.used_percent),
-						format!("{}", Size::Bytes(partition.bytes_free)),
-						format!("{}", Size::Bytes(partition.bytes_read_recently)),
-						format!("{}", Size::Bytes(partition.bytes_written_recently)),
-					]
-					.into_iter(),
-					self.colorscheme.text,
-				)
+				Row::new(vec![
+					partition.name,
+					format!("{}", partition.mountpoint.display()),
+					format!("{:3.0}%", partition.used_percent),
+					format!("{}", Size::Bytes(partition.bytes_free)),
+					format!("{}", Size::Bytes(partition.bytes_read_recently)),
+					format!("{}", Size::Bytes(partition.bytes_written_recently)),
+				])
+				.style(self.colorscheme.text)
 			}),
+			custom_column_sizing(area.width),
+		)
+		.header(
+			Row::new(["Partition", "Mount", "Used", "Free", "R/s", "W/s"])
+				.style(self.colorscheme.text.add_modifier(Modifier::BOLD)),
 		)
 		.block(block::new(self.colorscheme, &self.title))
-		.header_style(self.colorscheme.text.modifier(Modifier::BOLD))
-		.widths(&custom_column_sizing(area.width))
 		.column_spacing(1)
-		.header_gap(0)
 		.render(area, buf);
 	}
 }

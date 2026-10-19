@@ -1,5 +1,25 @@
 //! Platform specific helpers.
 
+/// Reads the commandline of the process with the given pid on FreeBSD.
+///
+/// FreeBSD has no procfs equivalent of the argument vector, so the `kern.proc.args.<pid>` sysctl
+/// is used instead. Returns `None` if the process exited, if there are insufficient permissions
+/// or if the process was started without arguments.
+#[cfg(target_os = "freebsd")]
+pub fn process_commandline(pid: u32) -> Option<String> {
+	let bytes = crate::sys::freebsd::sysctl::bytes(&format!("kern.proc.args.{}", pid)).ok()?;
+	// The sysctl returns the argument vector as a sequence of NUL terminated strings.
+	let arguments = bytes
+		.split(|&byte| byte == 0)
+		.filter(|argument| !argument.is_empty())
+		.map(|argument| String::from_utf8_lossy(argument).into_owned())
+		.collect::<Vec<_>>();
+	if arguments.is_empty() {
+		return None;
+	}
+	Some(arguments.join(" "))
+}
+
 /// Reads the commandline of the process with the given pid on macOS.
 ///
 /// macOS has no procfs equivalent of the argument vector, so the `KERN_PROCARGS2` sysctl is used

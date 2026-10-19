@@ -15,6 +15,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- [freebsd] FreeBSD support: all widgets read `sysctl`, `getfsstat`,
+  `getifaddrs` and `kern.proc` directly instead of using psutil, which does
+  not support FreeBSD; only the disk io counters are missing (as on macOS)
+- add a PTY based smoke test (`ci/smoke.py`) that drives the real interface
+  (filtering, mouse, sorting, help menu, quitting) and runs it on Linux and
+  in CI on FreeBSD
+
+### Changed
+
+- migrate the terminal UI from tui-rs 0.9 to ratatui 0.30 (crossterm 0.29)
+
+### Fixed
+
+- [disk] the io counters column now shows bytes written instead of bytes read
+
 ## [0.7.0] - 2026-10-19
 
 Maintenance release continuing the original

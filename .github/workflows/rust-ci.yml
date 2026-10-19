@@ -27,6 +27,12 @@ jobs:
       - name: Run cargo check
         run: cargo check --all-targets
 
+      - name: Run cargo check for FreeBSD
+        if: runner.os == 'Linux'
+        run: |
+          rustup target add x86_64-unknown-freebsd
+          cargo check --target x86_64-unknown-freebsd
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -66,3 +72,44 @@ jobs:
 
       - name: Run cargo clippy
         run: cargo clippy --all-targets -- -D warnings
+
+      - name: Run cargo clippy for FreeBSD
+        run: |
+          rustup target add x86_64-unknown-freebsd
+          cargo clippy --target x86_64-unknown-freebsd -- -D warnings
+
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build
+        run: cargo build
+
+      - name: Run the terminal smoke test
+        run: python3 ./ci/smoke.py
+
+  freebsd:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Build and run the smoke test on FreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          release: '14'
+          prepare: |
+            pkg install -y python3
+            fetch -o /tmp/rustup-init https://sh.rustup.rs
+            sh /tmp/rustup-init -y --default-toolchain stable --profile minimal
+          run: |
+            set -e
+            . "$HOME/.cargo/env"
+            freebsd-version -u
+            cargo build --release
+            python3 ./ci/smoke.py target/release/ytop

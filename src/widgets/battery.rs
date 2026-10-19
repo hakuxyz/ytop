@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use battery::Manager;
+use crate::sys::battery::Manager;
 use num_rational::Ratio;
-use tui::buffer::Buffer;
-use tui::layout::Rect;
-use tui::symbols::Marker;
-use tui::widgets::{Axis, Chart, Dataset, GraphType, Widget};
+use ratatui::buffer::Buffer;
+use ratatui::layout::Rect;
+use ratatui::symbols::Marker;
+use ratatui::widgets::{Axis, Chart, Dataset, GraphType, Widget};
 
 use crate::colorscheme::Colorscheme;
 use crate::update::UpdatableWidget;
@@ -85,14 +85,13 @@ impl Widget for &BatteryWidget<'_> {
 			})
 			.collect();
 
-		Chart::<String, String>::default()
+		Chart::new(datasets)
 			.block(block::new(self.colorscheme, &self.title))
 			.x_axis(Axis::default().bounds([
 				self.update_count as f64 - self.horizontal_scale as f64,
 				self.update_count as f64 + 1.0,
 			]))
 			.y_axis(Axis::default().bounds([0.0, 100.0]))
-			.datasets(&datasets)
 			.render(area, buf);
 
 		for (i, data) in self.battery_data.iter().enumerate() {

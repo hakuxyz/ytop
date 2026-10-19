@@ -40,3 +40,31 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ytop-${{ github.event.release.tag_name }}-${{ matrix.target }}.tar.gz
+
+  # The FreeBSD binary cannot be cross-linked from Linux or macOS, so it is
+  # built inside a real FreeBSD VM.
+  publish-freebsd:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Build release binary on FreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          release: '14'
+          prepare: |
+            fetch -o /tmp/rustup-init https://sh.rustup.rs
+            sh /tmp/rustup-init -y --default-toolchain stable --profile minimal
+          run: |
+            set -e
+            . "$HOME/.cargo/env"
+            cargo build --release
+
+      - name: Package release
+        run: tar -czf ytop-${{ github.event.release.tag_name }}-x86_64-unknown-freebsd.tar.gz -C ./target/release/ ytop
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ytop-${{ github.event.release.tag_name }}-x86_64-unknown-freebsd.tar.gz

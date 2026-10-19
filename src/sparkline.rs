@@ -1,18 +1,18 @@
 use std::cmp::min;
 
-use tui::buffer::Buffer;
-use tui::layout::Rect;
-use tui::style::Style;
-use tui::symbols::bar;
-use tui::widgets::{Block, Widget};
+use ratatui::buffer::Buffer;
+use ratatui::layout::Rect;
+use ratatui::style::Style;
+use ratatui::symbols::bar;
+use ratatui::widgets::{Block, Widget};
 
 /// Widget to render a sparkline over one or more lines.
 ///
 /// # Examples
 ///
 /// ```
-/// # use tui::widgets::{Block, Borders, Sparkline};
-/// # use tui::style::{Style, Color};
+/// # use ratatui::widgets::{Block, Borders, Sparkline};
+/// # use ratatui::style::{Style, Color};
 /// Sparkline::default()
 ///     .block(Block::default().title("Sparkline").borders(Borders::ALL))
 ///     .data(&[0, 2, 3, 4, 1, 4, 10])
@@ -96,10 +96,9 @@ impl<'a> Widget for Sparkline<'a> {
 
 		if self.show_baseline {
 			for i in spark_area.left()..spark_area.right() {
-				buf.get_mut(i, spark_area.bottom() - 1)
+				buf[(i, spark_area.bottom() - 1)]
 					.set_symbol(bar::ONE_EIGHTH)
-					.set_fg(self.style.fg)
-					.set_bg(self.style.bg);
+					.set_style(self.style);
 			}
 		}
 
@@ -141,10 +140,9 @@ impl<'a> Widget for Sparkline<'a> {
 					RenderDirection::Ltr => spark_area.left() + i as u16,
 					RenderDirection::Rtl => spark_area.right() - i as u16 - 1,
 				};
-				buf.get_mut(x, spark_area.top() + j)
+				buf[(x, spark_area.top() + j)]
 					.set_symbol(symbol)
-					.set_fg(self.style.fg)
-					.set_bg(self.style.bg);
+					.set_style(self.style);
 
 				if *d > 8 {
 					*d -= 8;

@@ -2,16 +2,16 @@ use std::collections::HashMap;
 use std::ops::Not;
 use std::process::Command;
 
-use num_rational::Ratio;
-use psutil::cpu;
-use psutil::memory;
-use psutil::process;
+use crate::sys::cpu;
+use crate::sys::memory;
+use crate::sys::process;
 #[cfg(target_os = "linux")]
-use psutil::process::os::linux::Oneshot;
-use tui::buffer::Buffer;
-use tui::layout::{Constraint, Rect};
-use tui::style::Modifier;
-use tui::widgets::{Row, Table, Widget};
+use crate::sys::process::os::linux::Oneshot;
+use num_rational::Ratio;
+use ratatui::buffer::Buffer;
+use ratatui::layout::{Constraint, Rect};
+use ratatui::style::{Modifier, Style};
+use ratatui::widgets::{Row, Table, Widget};
 
 use crate::colorscheme::Colorscheme;
 use crate::update::UpdatableWidget;
@@ -281,10 +281,16 @@ impl UpdatableWidget for ProcWidget<'_> {
 				let name = process.name_oneshot();
 				#[cfg(target_os = "macos")]
 				let name = process.name()?;
+				#[cfg(target_os = "freebsd")]
+				let name = process.name();
 
 				#[cfg(target_os = "linux")]
 				let commandline = process.cmdline()?.unwrap_or_else(|| format!("[{}]", name));
 				#[cfg(target_os = "macos")]
+				let commandline = crate::platform::process_commandline(num)
+					.filter(|commandline| !commandline.is_empty())
+					.unwrap_or_else(|| format!("[{}]", name));
+				#[cfg(target_os = "freebsd")]
 				let commandline = crate::platform::process_commandline(num)
 					.filter(|commandline| !commandline.is_empty())
 					.unwrap_or_else(|| format!("[{}]", name));
@@ -293,6 +299,8 @@ impl UpdatableWidget for ProcWidget<'_> {
 				let cpu = process.cpu_percent_oneshot() / cpu_count;
 				#[cfg(target_os = "macos")]
 				let cpu = process.cpu_percent()? / cpu_count;
+				#[cfg(target_os = "freebsd")]
+				let cpu = process.cpu_percent() / cpu_count;
 
 				let mem = process.memory_percent_oneshot(&virtual_memory)?;
 
@@ -443,24 +451,31 @@ impl Widget for &mut ProcWidget<'_> {
 		};
 		let view_end = usize::min(self.view_offset + self.view_height, procs_count);
 		Table::new(
-			header.iter(),
 			procs.into_iter().skip(self.view_offset).map(|proc| {
-				Row::StyledData(
-					vec![
-						format!(" {}", proc.num),
-						if self.grouping {
-							proc.name
-						} else {
-							proc.commandline
-						},
-						format!("{:>5.1}", proc.cpu),
-						format!("{:>4.1}", proc.mem),
-					]
-					.into_iter(),
-					self.colorscheme.text,
-				)
+				Row::new(vec![
+					format!(" {}", proc.num),
+					if self.grouping {
+						proc.name
+					} else {
+						proc.commandline
+					},
+					format!("{:>5.1}", proc.cpu),
+					format!("{:>4.1}", proc.mem),
+				])
+				.style(self.colorscheme.text)
 			}),
+			[
+				// max PID can be 4194304 (7 digits) + 1 for padding
+				Constraint::Length(8),
+				// Constraint::Min(5),
+				// width - (left + right border) - (column1 + column3 + column4 width) - (spaces
+				// between colums)
+				Constraint::Length(u16::max((area.width as i16 - 2 - 18 - 3) as u16, 5)),
+				Constraint::Length(5),
+				Constraint::Length(5),
+			],
 		)
+		.header(Row::new(header).style(self.colorscheme.text.add_modifier(Modifier::BOLD)))
 		.block(block::new(
 			self.colorscheme,
 			&format!(
@@ -468,31 +483,19 @@ impl Widget for &mut ProcWidget<'_> {
 				self.title, filter_suffix, view_start, view_end, procs_count
 			),
 		))
-		.header_style(self.colorscheme.text.modifier(Modifier::BOLD))
 		// TODO: this is only a temporary workaround until we fix the table column resizing
 		// https://github.com/cjbassi/ytop/issues/23
-		.widths(&[
-			// max PID can be 4194304 (7 digits) + 1 for padding
-			Constraint::Length(8),
-			// Constraint::Min(5),
-			// width - (left + right border) - (column1 + column3 + column4 width) - (spaces
-			// between colums)
-			Constraint::Length(u16::max((area.width as i16 - 2 - 18 - 3) as u16, 5)),
-			Constraint::Length(5),
-			Constraint::Length(5),
-		])
 		.column_spacing(1)
-		.header_gap(0)
 		.render(area, buf);
 
 		// Draw cursor.
 		let cursor_y = inner.y + 1 + self.selected_row as u16 - self.view_offset as u16;
 		if self.row_count > 0 && cursor_y < inner.bottom() {
 			for i in inner.x..inner.right() {
-				let cell = buf.get_mut(i, cursor_y);
-				if cell.symbol != " " {
-					cell.set_modifier(Modifier::REVERSED);
-					cell.set_fg(self.colorscheme.proc_cursor);
+				let cell = &mut buf[(i, cursor_y)];
+				if cell.symbol() != " " {
+					cell.set_fg(self.colorscheme.proc_cursor)
+						.set_style(Style::default().add_modifier(Modifier::REVERSED));
 				} else {
 					cell.set_bg(self.colorscheme.proc_cursor);
 				}
