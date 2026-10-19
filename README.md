@@ -159,7 +159,7 @@ OPTIONS:
 
 ytop was created by [Caleb Bassi](https://github.com/cjbassi). This fork
 continues the original project at
-https://github.com/hakuxyz/ytop — please credit the original repository and its
+https://github.com/hakuxyz/ytop - please credit the original repository and its
 author when redistributing.
 
 ## Related projects
