@@ -332,7 +332,7 @@ def main():
 	durations = []
 	for i in range(len(images)):
 		delta = frames[i + 1][0] - frames[i][0] if i + 1 < len(frames) else 1.0
-		durations.append(max(80, min(1500, int(round(delta * 1000)))))
+		durations.append(max(80, min(3000, int(round(delta * 1000)))))
 	images[0].save(
 		out,
 		save_all=True,
