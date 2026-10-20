@@ -1,11 +1,20 @@
 [package]
-name = "ytop"
+# Published on crates.io as `ytop-rs`, because the `ytop` crate belongs to the
+# original author; `cargo install ytop-rs` still installs the `ytop` binary.
+name = "ytop-rs"
 version = "0.8.0"
 authors = ["Caleb Bassi <calebjbassi@gmail.com>", "haku <beamzbyhakz@proton.me>"]
 license = "MIT"
 description = "A TUI system monitor written in Rust"
 edition = "2018"
 repository = "https://github.com/hakuxyz/ytop"
+readme = "README.md"
+keywords = ["tui", "terminal", "monitor", "system"]
+categories = ["command-line-utilities"]
+
+[[bin]]
+name = "ytop"
+path = "src/main.rs"
 
 [dependencies]
 better-panic = "0.2.0"

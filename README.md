@@ -35,6 +35,15 @@
 
 ytop runs on Linux, macOS and FreeBSD.
 
+### From crates.io
+
+```bash
+cargo install ytop-rs
+```
+
+The package is called `ytop-rs` on crates.io (the name `ytop` belongs to the
+original author), but the installed binary is simply called `ytop`.
+
 ### From source
 
 ```bash

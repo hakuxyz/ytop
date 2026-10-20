@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- publish on crates.io as `ytop-rs` (the `ytop` crate belongs to the original
+  author); `cargo install ytop-rs` installs the usual `ytop` binary
+
 ## [0.8.0] - 2026-10-19
 
 ### Added
